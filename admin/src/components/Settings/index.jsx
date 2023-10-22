@@ -13,9 +13,9 @@ import {
   Box,
   TextInput,
   Main,
-  Select,
+  SingleSelect,
+  SingleSelectOption,
   Typography,
-  Option,
   Link,
 } from "@strapi/design-system";
 
@@ -31,12 +31,42 @@ const AiModels = [
     label: "faster and lower cost, suited for Q&A, translation, service bot",
   },
 ];
+
+const AiBackends = [
+  {
+    id: "open_ai",
+    name: "Open AI",
+    customUrlAllowed: true,
+    defaultUrl: "https://api.openai.com/v1",
+    customUrlRequired: false,
+    requireCustomModelName: false,
+    defaultModels: [
+      {
+        value: "text-davinci-003",
+        label: "higher quality, longer output, better instruction following",
+      },
+      {
+        value: "text-curie-001",
+        label:
+          "faster and lower cost, suited for Q&A, translation, service bot",
+      },
+    ],
+  },
+  {
+    id: "azure_ai",
+    name: "Azure AI",
+    customUrlAllowed: true,
+    customUrlRequired: true,
+    defaultUrl: "https://azure-endpoint-name.openai.azure.com/",
+  },
+];
 const Settings = () => {
   const { formatMessage } = useIntl();
   const toggleNotification = useNotification();
   const [loading, setLoading] = useState(false);
   const apiKeyRef = useRef("");
   const modelNameRef = useRef("text-davinci-003");
+  const backendRef = useRef("azure_ai");
   const maxTokensRef = useRef(2048);
 
   const instance = axios.create({
@@ -50,6 +80,10 @@ const Settings = () => {
   const [chatGPTConfig, setChatGPTConfig] = useState({
     apiKey: "",
     modelName: "text-davinci-003",
+    backend: "open_ai",
+    backendConf: {
+      url: "",
+    },
     maxTokens: 2048,
   });
 
@@ -59,12 +93,12 @@ const Settings = () => {
     apiKeyRef.current = data.apiKey;
     modelNameRef.current = data.modelName;
     maxTokensRef.current = data.maxTokens;
+    backendRef.current = data.backend;
   };
 
   const handleChatGPTConfigChange = (key) => (e) => {
-    console.log("key", e);
     // update the refs
-    if (key === "modelName") {
+    if (key === "modelName" || key === "backendApi") {
       setChatGPTConfig({
         ...chatGPTConfig,
         [key]: e,
@@ -77,6 +111,9 @@ const Settings = () => {
     }
 
     switch (key) {
+      case "backendApi":
+        backendRef.current = e;
+        break;
       case "apiKey":
         apiKeyRef.current = e.target.value;
         break;
@@ -193,6 +230,23 @@ const Settings = () => {
             hasRadius
           >
             <Grid gap={6}>
+              <GridItem col={3}>
+                <SingleSelect
+                  name="backendApi"
+                  id="backendApi"
+                  label="Backend"
+                  placeholder="Select a backend"
+                  refs={backendRef}
+                  value={chatGPTConfig.backend ?? "open_ai"}
+                  onChange={handleChatGPTConfigChange("backendApi")}
+                >
+                  {AiBackends.map((backend) => (
+                    <SingleSelectOption key={backend.id} value={backend.name}>
+                      {backend.name}
+                    </SingleSelectOption>
+                  ))}
+                </SingleSelect>
+              </GridItem>
               <GridItem col={6}>
                 <TextInput
                   type="text"
@@ -206,7 +260,29 @@ const Settings = () => {
                 />
               </GridItem>
 
-              <GridItem col={6}>
+            </Grid>
+
+            <Box paddingTop={5}>
+              <Grid gap={6}>
+              <GridItem col={3}>
+                <SingleSelect
+                  name="modelName"
+                  id="modelName"
+                  label="Model Name"
+                  placeholder="Select a model"
+                  refs={modelNameRef}
+                  value={chatGPTConfig.modelName}
+                  onChange={handleChatGPTConfigChange("modelName")}
+                >
+                  {AiModels.map((model) => (
+                    <SingleSelectOption key={model.value} value={model.value}>
+                      {model.value} - {model.label}
+                    </SingleSelectOption>
+                  ))}
+                </SingleSelect>
+              </GridItem>
+
+              <GridItem col={3}>
                 <TextInput
                   type="text"
                   id="maxTokens"
@@ -218,24 +294,8 @@ const Settings = () => {
                   onChange={handleChatGPTConfigChange("maxTokens")}
                 />
               </GridItem>
-              <GridItem>
-                <Select
-                  name="modelName"
-                  id="modelName"
-                  label="Model Name"
-                  placeholder="Select a model"
-                  refs={modelNameRef}
-                  value={chatGPTConfig.modelName}
-                  onChange={handleChatGPTConfigChange("modelName")}
-                >
-                  {AiModels.map((model) => (
-                    <Option key={model.value} value={model.value}>
-                      {model.value} - {model.label}
-                    </Option>
-                  ))}
-                </Select>
-              </GridItem>
-            </Grid>
+              </Grid>
+            </Box>
             <Box paddingTop={5}>
               <Typography>
                 You can set additional parameters{" ("}
